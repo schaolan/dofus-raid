@@ -19,7 +19,23 @@ Application MVP de suivi de raids de guilde Dofus avec :
 
 ## Demarrage rapide
 
-### 1. Lancer PostgreSQL
+### Option A — tout en conteneurs (Docker)
+
+Lance postgres + backend + frontend d'une seule commande :
+
+```bash
+docker compose --profile full up -d --build
+# ou : ./scripts/start-stack.sh   (scripts\start-stack.cmd sous Windows)
+```
+
+- Frontend : http://localhost:5173
+- Backend : http://localhost:8080
+
+`docker compose down` arrete la stack (ajouter `-v` pour effacer la base).
+
+### Option B — en local (base en conteneur, services en dev)
+
+#### 1. Lancer PostgreSQL
 
 ```bash
 docker compose up -d
@@ -49,7 +65,8 @@ Le script backend detecte automatiquement un JDK 25 (`~/.jdks`, Eclipse Adoptium
 
 | Action | Git Bash | Windows (cmd) |
 |---|---|---|
-| Tout lancer (db + back + front) | `./scripts/dev.sh` | _(lancer back et front separement)_ |
+| Tout en conteneurs (db + back + front) | `./scripts/start-stack.sh` | `scripts\start-stack.cmd` |
+| Tout en dev (db + back + front local) | `./scripts/dev.sh` | _(lancer back et front separement)_ |
 | Base PostgreSQL | `./scripts/start-db.sh` | `scripts\start-db.cmd` |
 | Backend | `./scripts/start-backend.sh` | `scripts\start-backend.cmd` |
 | Frontend | `./scripts/start-frontend.sh` | `scripts\start-frontend.cmd` |
