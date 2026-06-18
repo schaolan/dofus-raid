@@ -1,0 +1,22 @@
+spring:
+  application:
+    name: dofus-raid-backend
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/dofusraid}
+    username: ${SPRING_DATASOURCE_USERNAME:dofus}
+    password: ${SPRING_DATASOURCE_PASSWORD:dofus}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+
+  flyway:
+    enabled: true
+
+server:
+  port: 8080

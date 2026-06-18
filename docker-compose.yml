@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: dofus-raid-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-dofusraid}
+      POSTGRES_USER: ${POSTGRES_USER:-dofus}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dofus}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-dofus} -d ${POSTGRES_DB:-dofusraid}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres_data:
