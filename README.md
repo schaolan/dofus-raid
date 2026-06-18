@@ -42,6 +42,22 @@ npm install
 npm run dev
 ```
 
+## Scripts de lancement
+
+Des scripts fournis dans `scripts/` (Git Bash et Windows `.cmd`) automatisent le demarrage.
+Le script backend detecte automatiquement un JDK 25 (`~/.jdks`, Eclipse Adoptium, etc.).
+
+| Action | Git Bash | Windows (cmd) |
+|---|---|---|
+| Tout lancer (db + back + front) | `./scripts/dev.sh` | _(lancer back et front separement)_ |
+| Base PostgreSQL | `./scripts/start-db.sh` | `scripts\start-db.cmd` |
+| Backend | `./scripts/start-backend.sh` | `scripts\start-backend.cmd` |
+| Frontend | `./scripts/start-frontend.sh` | `scripts\start-frontend.cmd` |
+
+`dev.sh` demarre la base (si Docker present), lance le backend en arriere-plan puis le
+frontend ; `Ctrl+C` arrete les deux. Si Docker est absent, demarrez un PostgreSQL 16 sur
+`localhost:5432` (db `dofusraid`, user `dofus`, password `dofus`).
+
 ## URLs
 
 - Frontend : http://localhost:5173
