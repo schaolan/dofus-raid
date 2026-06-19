@@ -16,5 +16,35 @@ services:
       timeout: 5s
       retries: 10
 
+  # backend / frontend ne demarrent qu'avec le profil "full" :
+  #   docker compose --profile full up -d --build
+  # `docker compose up -d` (sans profil) ne lance que postgres.
+  backend:
+    build: ./backend
+    container_name: dofus-raid-backend
+    profiles: ["full"]
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-dofusraid}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-dofus}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-dofus}
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    container_name: dofus-raid-frontend
+    profiles: ["full"]
+    # Le navigateur (hors conteneur) appelle le backend sur http://localhost:8080,
+    # origine 5173 deja autorisee par le CORS backend.
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
 volumes:
   postgres_data:
