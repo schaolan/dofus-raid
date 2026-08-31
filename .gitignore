@@ -23,3 +23,6 @@ frontend/.vite/
 # IDE
 .vscode/
 .idea/
+
+# Azure Developer CLI (environnements locaux)
+.azure/

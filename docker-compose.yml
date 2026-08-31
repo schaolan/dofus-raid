@@ -27,6 +27,9 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-dofusraid}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-dofus}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-dofus}
+      # Le front est servi en meme origine (proxy nginx), le CORS n'est donc plus
+      # sollicite en local ; on garde la valeur configurable par coherence.
+      APP_CORS_ALLOWED_ORIGINS: ${APP_CORS_ALLOWED_ORIGINS:-http://localhost:5173}
     ports:
       - "8080:8080"
     depends_on:
@@ -38,8 +41,10 @@ services:
     build: ./frontend
     container_name: dofus-raid-frontend
     profiles: ["full"]
-    # Le navigateur (hors conteneur) appelle le backend sur http://localhost:8080,
-    # origine 5173 deja autorisee par le CORS backend.
+    # Le navigateur appelle /api en meme origine (http://localhost:5173) ; nginx
+    # proxifie ces requetes vers le backend via le reseau interne compose.
+    environment:
+      BACKEND_URL: ${BACKEND_URL:-http://backend:8080}
     ports:
       - "5173:80"
     depends_on:

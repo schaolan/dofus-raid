@@ -92,8 +92,9 @@ frontend ; `Ctrl+C` arrete les deux. Si Docker est absent, demarrez un PostgreSQ
 ## Donnees seed
 
 - 1 guilde (`Les Veilleurs`, id 1)
-- 1 raid (`Forge Obscure`, id 1)
-- 3 paliers
+- 2 raids :
+  - `Sanctuaire des Jardins eternels` (id 1, difficulte `HARD`) — 4 paliers
+  - `Gouffre du Gigalodon` (id 2, difficulte `MEDIUM`) — 7 paliers
 
 ## Endpoints principaux
 
@@ -105,6 +106,19 @@ frontend ; `Ctrl+C` arrete les deux. Si Docker est absent, demarrez un PostgreSQ
 - `GET /api/guilds/{guildId}/raids/{raidId}/progression`
 - `POST /api/guilds/{guildId}/raids/{raidId}/paliers/{palierId}/validate`
 - `POST /api/chat/questions`
+
+## Deploiement Azure
+
+La stack se deploie sur **Azure Container Apps** + **PostgreSQL Flexible Server** via
+**Azure Developer CLI** :
+
+```bash
+azd auth login
+azd up
+```
+
+Le frontend (nginx) proxifie `/api` vers le backend (ingress interne), sans CORS. Details,
+CI/CD (GitHub Actions OIDC) et teardown : voir [`docs/azure-deployment.md`](docs/azure-deployment.md).
 
 ## Note de compatibilite
 
