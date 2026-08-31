@@ -1,0 +1,29 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
+#
+# Configuration Azure Developer CLI (azd).
+# Deploiement : `azd auth login` puis `azd up`.
+name: dofus-raid
+metadata:
+  template: dofus-raid@1.0.0
+
+# Les services sont mappes aux Container Apps via le tag `azd-service-name`
+# defini dans infra/main.bicep.
+services:
+  backend:
+    project: ./backend
+    language: docker
+    host: containerapp
+    docker:
+      path: ./Dockerfile
+      context: .
+
+  frontend:
+    project: ./frontend
+    language: docker
+    host: containerapp
+    docker:
+      path: ./Dockerfile
+      context: .
+      # Front construit en relatif same-origin : nginx proxifie /api vers le backend.
+      buildArgs:
+        - VITE_API_URL=""

@@ -23,7 +23,9 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-validation")
 
-    implementation("org.flywaydb:flyway-core")
+    // Spring Boot 4 a modularise les auto-configurations : flyway-core seul ne suffit
+    // plus pour lancer les migrations au demarrage. Le starter apporte la lib + l'auto-config.
+    implementation("org.springframework.boot:spring-boot-starter-flyway")
     runtimeOnly("org.flywaydb:flyway-database-postgresql")
     runtimeOnly("org.postgresql:postgresql")
 
