@@ -191,8 +191,23 @@ resource backend 'Microsoft.App/containerApps@2024-03-01' = {
         }
       ]
       scale: {
-        minReplicas: 1
+        // Scale-to-zero : plus aucune replica facturee apres ~5 min d'inactivite.
+        // Contrepartie : cold start sur la premiere requete (demarrage JVM +
+        // Spring Boot + Flyway, de l'ordre de 15-30 s). Les timeouts du proxy
+        // nginx du frontend sont dimensionnes en consequence.
+        // Pour un environnement ou la latence importe : repasser a 1.
+        minReplicas: 0
         maxReplicas: 2
+        rules: [
+          {
+            name: 'http'
+            http: {
+              metadata: {
+                concurrentRequests: '20'
+              }
+            }
+          }
+        ]
       }
     }
   }
@@ -249,8 +264,20 @@ resource frontend 'Microsoft.App/containerApps@2024-03-01' = {
         }
       ]
       scale: {
-        minReplicas: 1
+        // Scale-to-zero. Cold start nginx negligeable (~1-3 s), mais la premiere
+        // requete /api/ derriere reveille aussi le backend (voir ci-dessus).
+        minReplicas: 0
         maxReplicas: 2
+        rules: [
+          {
+            name: 'http'
+            http: {
+              metadata: {
+                concurrentRequests: '50'
+              }
+            }
+          }
+        ]
       }
     }
   }

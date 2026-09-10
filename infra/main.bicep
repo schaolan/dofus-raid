@@ -11,7 +11,23 @@ targetScope = 'subscription'
 param environmentName string
 
 @minLength(1)
-@description('Region Azure de deploiement (ex. westeurope).')
+// Liste restreinte aux regions ou PostgreSQL Flexible Server est provisionnable :
+// certaines regions (eastus, eastus2, westeurope, germanywestcentral...) sont
+// restreintes pour les souscriptions de type pay-as-you-go / MSDN et renvoient
+// alors une erreur trompeuse a la creation du serveur :
+//   ParameterOutOfRange: The value of the 'Version' should be in: []
+// Voir docs/azure-deployment.md (section « Regions supportees ») pour verifier
+// la disponibilite sur votre souscription.
+@allowed([
+  'francecentral'
+  'northeurope'
+  'swedencentral'
+  'uksouth'
+  'centralus'
+  'westus3'
+  'canadacentral'
+])
+@description('Region Azure de deploiement (ex. francecentral).')
 param location string
 
 @description('Identifiant administrateur du serveur PostgreSQL.')

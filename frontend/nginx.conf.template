@@ -20,6 +20,14 @@ server {
         proxy_pass              ${BACKEND_URL};
         proxy_http_version      1.1;
         proxy_ssl_server_name   on;
+
+        # Le backend tourne en scale-to-zero (minReplicas: 0) : la premiere requete
+        # apres une periode d'inactivite attend son demarrage a froid. On depasse
+        # les 60 s par defaut pour ne pas renvoyer un 504 pendant l'activation.
+        proxy_connect_timeout   90s;
+        proxy_send_timeout      90s;
+        proxy_read_timeout      90s;
+
         proxy_set_header Host              $proxy_host;
         proxy_set_header X-Real-IP         $remote_addr;
         proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;

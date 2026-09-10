@@ -24,6 +24,12 @@ services:
     docker:
       path: ./Dockerfile
       context: .
-      # Front construit en relatif same-origin : nginx proxifie /api vers le backend.
-      buildArgs:
-        - VITE_API_URL=""
+      # Pas de buildArgs : le Dockerfile declare deja `ARG VITE_API_URL=""` (chaine
+      # vide), donc le front est construit en relatif same-origin et nginx proxifie
+      # /api vers le backend.
+      #
+      # Ne PAS reintroduire `buildArgs: [VITE_API_URL=""]` : en YAML les guillemets
+      # ne sont pas en debut de scalaire, ils font donc partie de la valeur. Docker
+      # recoit deux guillemets litteraux, le bundle embarque API_URL = '""' et le
+      # navigateur appelle /""/api/raids -- que le fallback SPA de nginx sert en
+      # 200 + index.html (echec invisible dans l'onglet Network).

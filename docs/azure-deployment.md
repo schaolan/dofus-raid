@@ -40,7 +40,7 @@ azd up
 
 `azd up` demande :
 1. un **nom d'environnement** (préfixe des ressources, ex. `dofus-prod`) ;
-2. la **souscription** et la **région** (ex. `westeurope` / `francecentral`) ;
+2. la **souscription** et la **région** (voir [Régions supportées](#régions-supportées)) ;
 3. le **mot de passe administrateur PostgreSQL** (paramètre `postgresAdminPassword`).
 
 > Astuce : pour éviter la saisie interactive du mot de passe, définissez-le avant :
@@ -71,6 +71,57 @@ Variables d'application injectées automatiquement par le Bicep :
 - backend : `SPRING_DATASOURCE_URL` (avec `sslmode=require`), `SPRING_DATASOURCE_USERNAME`,
   `SPRING_DATASOURCE_PASSWORD` (secret), `APP_CORS_ALLOWED_ORIGINS`.
 - frontend : `BACKEND_URL` (FQDN interne HTTPS du backend).
+
+## Régions supportées
+
+Le paramètre `location` de [`infra/main.bicep`](../infra/main.bicep) est volontairement
+restreint (`@allowed`) aux régions où **PostgreSQL Flexible Server** est provisionnable :
+
+`francecentral`, `northeurope`, `swedencentral`, `uksouth`, `centralus`, `westus3`,
+`canadacentral`.
+
+Plusieurs régions très courantes (`eastus`, `eastus2`, `westeurope`,
+`germanywestcentral`, …) sont **restreintes** pour les souscriptions pay-as-you-go /
+MSDN : la création du serveur PostgreSQL y échoue avec une erreur trompeuse, tandis que
+toutes les autres ressources (ACR, Container Apps, Log Analytics) se créent normalement :
+
+```
+ParameterOutOfRange: The value of the 'Version' should be in: [].
+```
+
+`azd` traduit cet échec en un message encore plus trompeur :
+`A resource with this name already exists or is in a conflicting state`. Il ne s'agit
+**pas** d'un conflit de nom.
+
+### Vérifier la disponibilité pour votre souscription
+
+```bash
+az provider show --namespace Microsoft.DBforPostgreSQL --query "resourceTypes[?resourceType=='flexibleServers'].locations" -o tsv
+
+# Détail pour une région donnée (liste vide de versions = région restreinte)
+az postgres flexible-server list-skus --location francecentral -o table
+```
+
+Si la région est restreinte, la réponse contient :
+`Subscriptions are restricted from provisioning in this region.`
+
+> ⚠️ `resourceToken` dérive de `uniqueString(subscription().id, environmentName, location)` :
+> changer de région après un déploiement renomme **toutes** les ressources. Faites
+> `azd down --purge` (ou supprimez le groupe `rg-<env>`) avant de changer `AZURE_LOCATION`,
+> sinon l'ancien jeu de ressources reste orphelin et facturé dans le même groupe.
+
+### Diagnostiquer un échec de `provision`
+
+`azd` masque souvent l'erreur réelle. Pour l'obtenir :
+
+```bash
+# Dernier déploiement au scope souscription
+az deployment sub list --query "[0].{name:name,state:properties.provisioningState}" -o table
+
+# Opérations en échec du déploiement imbriqué (scope groupe de ressources)
+az deployment operation group list -g rg-<env> -n resources \
+  --query "[?properties.provisioningState=='Failed'].properties.statusMessage" -o json
+```
 
 ## Vérification
 
@@ -126,7 +177,7 @@ az role assignment create --assignee "$spId" --role "User Access Administrator" 
 
 **Variables** (onglet Variables) :
 - `AZURE_ENV_NAME` = nom d'environnement (ex. `dofus-prod`)
-- `AZURE_LOCATION` = région (ex. `westeurope`)
+- `AZURE_LOCATION` = région (ex. `francecentral`, cf. [Régions supportées](#régions-supportées))
 
 ## Suppression des ressources
 
@@ -136,12 +187,47 @@ azd down --purge
 
 Supprime le groupe de ressources et purge l'ACR/PostgreSQL.
 
+## Scale-to-zero
+
+Les deux Container Apps sont en **`minReplicas: 0`** ([`infra/resources.bicep`](../infra/resources.bicep)) :
+après ~5 min sans trafic (cooldown KEDA par défaut), plus aucune replica n'est facturée.
+
+Contrepartie mesurée en `francecentral` depuis 0 replica :
+
+| Requête | À froid | À chaud |
+|---|---|---|
+| `GET /` (réveil nginx) | ~22 s | ~0,05 s |
+| `GET /api/raids` (réveil JVM + Spring Boot + Flyway, via le proxy) | ~54 s | ~0,11 s |
+
+Un visiteur qui arrive sur un environnement en veille attend donc jusqu'à **~75 s** avant
+de voir la liste des raids. C'est le prix du scale-to-zero sur une stack JVM.
+
+> ⚠️ Les timeouts du `location /api/` de [`frontend/nginx.conf.template`](../frontend/nginx.conf.template)
+> sont portés à **90 s** pour cette raison. Avec les 60 s par défaut de nginx, le réveil du
+> backend (~54 s) passe tout juste — un démarrage un peu plus lent renverrait un **504**.
+> Ne pas les rabaisser tant que `minReplicas: 0` est actif sur le backend.
+
+### Revenir à des replicas chaudes
+
+Dans [`infra/resources.bicep`](../infra/resources.bicep), repasser `minReplicas` à `1` :
+
+- sur le **backend** uniquement : supprime les ~54 s d'attente sur l'API, ne laisse que le
+  réveil nginx (~22 s). Bon compromis latence/coût ;
+- sur les **deux** : plus aucun cold start, coût de compute permanent.
+
 ## Coûts indicatifs (ordre de grandeur, région Europe)
 
-- PostgreSQL Flexible `Standard_B1ms` (Burstable) : le poste principal.
-- 2 Container Apps : facturés à l'usage (possibilité de `minReplicas: 0` pour scale-to-zero
-  si un léger cold start est acceptable — actuellement `minReplicas: 1`).
+- PostgreSQL Flexible `Standard_B1ms` (Burstable) : le poste principal, facturé **24/7
+  indépendamment du scale-to-zero** des Container Apps.
+- 2 Container Apps : facturés à l'usage, ~0 en veille grâce à `minReplicas: 0`.
 - ACR `Basic` + Log Analytics : marginaux.
 
-Pour réduire les coûts d'un environnement de démo, envisager `minReplicas: 0` sur le
-frontend et/ou l'arrêt du serveur PostgreSQL entre deux sessions.
+Le scale-to-zero ne réduit que la part compute. Pour un environnement de démo, le vrai
+levier restant est **l'arrêt du serveur PostgreSQL** entre deux sessions :
+
+```bash
+az postgres flexible-server stop  -g rg-<env> -n psql-<token>
+az postgres flexible-server start -g rg-<env> -n psql-<token>
+```
+
+(Azure redémarre automatiquement un serveur arrêté au bout de 7 jours.)
