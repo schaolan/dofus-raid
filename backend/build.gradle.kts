@@ -22,6 +22,8 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-validation")
+    implementation("org.springframework.boot:spring-boot-starter-cache")
+    implementation("com.github.ben-manes.caffeine:caffeine")
 
     // Spring Boot 4 a modularise les auto-configurations : flyway-core seul ne suffit
     // plus pour lancer les migrations au demarrage. Le starter apporte la lib + l'auto-config.

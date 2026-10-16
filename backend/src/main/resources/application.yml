@@ -18,6 +18,13 @@ spring:
   flyway:
     enabled: true
 
+  cache:
+    type: caffeine
+    cache-names: guilds,guildById
+    caffeine:
+      # Les guildes sont des donnees de reference quasi statiques : on peut garder longtemps.
+      spec: maximumSize=500,expireAfterWrite=1h
+
 server:
   port: 8080
 
